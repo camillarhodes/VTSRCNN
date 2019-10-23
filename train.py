@@ -39,7 +39,7 @@ def get_train_data():
     train_rgb_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.rgb_img_path, regx='.*.png', printable=False))#[0:20]
 
     # make sure pairs match, in the format of (FILENAME_gt.png, FILENAME_gi.png')
-    assert all(file1.split('_')[:-1] == file2.split('_')[:-1] for (file1, file2) in zip(train_hr_img_list, train_rgb_img_list))
+    assert all(file1.split('_')[0] == file2.split('_')[0] for (file1, file2) in zip(train_hr_img_list, train_rgb_img_list))
         # train_lr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.lr_img_path, regx='.*.png', printable=False))
         # valid_hr_img_list = sorted(tl.files.load_file_list(path=config.VALID.hr_img_path, regx='.*.png', printable=False))
         # valid_lr_img_list = sorted(tl.files.load_file_list(path=config.VALID.lr_img_path, regx='.*.png', printable=False))
@@ -166,6 +166,10 @@ def evaluate():
     # train_lr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.lr_img_path, regx='.*.png', printable=False))
     valid_hr_img_list = sorted(tl.files.load_file_list(path=config.VALID.hr_img_path, regx='.*.png', printable=False))
     valid_lr_img_list = sorted(tl.files.load_file_list(path=config.VALID.lr_img_path, regx='.*.png', printable=False))
+    valid_rgb_img_list = sorted(tl.files.load_file_list(path=config.VALID.rgb_img_path, regx='.*.png', printable=False))
+
+
+    assert all(file1.split('_')[0] == file2.split('_')[0] == file3.split('_')[0] for (file1, file2, file3) in zip(valid_lr_img_list, valid_lr_img_list, valid_rgb_img_list))
 
     ## if your machine have enough memory, please pre-load the whole train set.
     # train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
@@ -175,34 +179,57 @@ def evaluate():
     # for im in valid_lr_imgs:
     #     print(im.shape)
     valid_hr_imgs = tl.vis.read_images(valid_hr_img_list, path=config.VALID.hr_img_path, n_threads=32)
+    valid_rgb_imgs = tl.vis.read_images(valid_rgb_img_list, path=config.VALID.rgb_img_path, n_threads=32)
     # for im in valid_hr_imgs:
     #     print(im.shape)
 
+    def _map_fn_valid_ir(img):
+        img = img[:,:,1:2] # use second channel in IR
+        img = img / (255. / 2.)
+        img = img - 1.
+        return img
+    def _map_fn_valid_rgb(img):
+        img = img / (255. / 2.)
+        img = img - 1.
+        img = img[:,:,:3]
+        return img
+
+    valid_lr_imgs = list(map(_map_fn_valid_ir, valid_lr_imgs))
+    valid_hr_imgs = list(map(_map_fn_valid_ir, valid_hr_imgs))
+    valid_rgb_imgs = list(map(_map_fn_valid_rgb, valid_rgb_imgs))
+
     ###========================== DEFINE MODEL ============================###
-    imid = 64  # 0: 企鹅  81: 蝴蝶 53: 鸟  64: 古堡
+
+
+    imid = 30
     valid_lr_img = valid_lr_imgs[imid]
     valid_hr_img = valid_hr_imgs[imid]
+    valid_rgb_img = valid_rgb_imgs[imid]
+
     # valid_lr_img = get_imgs_fn('test.png', 'data2017/')  # if you want to test your own image
-    valid_lr_img = (valid_lr_img / 127.5) - 1  # rescale to ［－1, 1]
+    # valid_lr_img = (valid_lr_img / 127.5) - 1  # rescale to ［－1, 1]
     # print(valid_lr_img.min(), valid_lr_img.max())
 
-    G = get_G([1, None, None, 3])
+    G = get_G((1, None, None, 1), (1, None, None, 3))
     G.load_weights(os.path.join(checkpoint_dir, 'g.h5'))
     G.eval()
 
     valid_lr_img = np.asarray(valid_lr_img, dtype=np.float32)
     valid_lr_img = valid_lr_img[np.newaxis,:,:,:]
+    valid_rgb_img = np.asarray(valid_rgb_img, dtype=np.float32)
+    valid_rgb_img = valid_rgb_img[np.newaxis,:,:,:]
     size = [valid_lr_img.shape[1], valid_lr_img.shape[2]]
 
-    out = G(valid_lr_img).numpy()
+    out = G([valid_lr_img, valid_rgb_img]).numpy()
 
     print("LR size: %s /  generated HR size: %s" % (size, out.shape))  # LR size: (339, 510, 3) /  gen HR size: (1, 1356, 2040, 3)
     print("[*] save images")
     tl.vis.save_image(out[0], os.path.join(save_dir, 'valid_gen.png'))
-    tl.vis.save_image(valid_lr_img[0], os.path.join(save_dir, 'valid_lr.png'))
-    tl.vis.save_image(valid_hr_img, os.path.join(save_dir, 'valid_hr.png'))
+    tl.vis.save_image(valid_lr_img[0,:,:,0], os.path.join(save_dir, 'valid_lr.png'))
+    tl.vis.save_image(valid_hr_img[:,:,0], os.path.join(save_dir, 'valid_hr.png'))
+    tl.vis.save_image(valid_rgb_img[0], os.path.join(save_dir, 'valid_rgb.png'))
 
-    out_bicu = scipy.misc.imresize(valid_lr_img[0], [size[0] * 4, size[1] * 4], interp='bicubic', mode=None)
+    out_bicu = scipy.misc.imresize(valid_lr_img[0,:,:,0], [size[0] * 4, size[1] * 4], interp='bicubic', mode=None)
     tl.vis.save_image(out_bicu, os.path.join(save_dir, 'valid_bicubic.png'))
 
 

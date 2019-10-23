@@ -29,8 +29,11 @@ config.TRAIN.rgb_img_path = 'ULB17-VT/RGB/'
 
 config.VALID = edict()
 ## test set location
-config.VALID.hr_img_path = 'DIV2K/DIV2K_valid_HR/'
-config.VALID.lr_img_path = 'DIV2K/DIV2K_valid_LR_bicubic/X4/'
+config.VALID.hr_img_path = 'ULB17-VT/HR_VALID/'
+config.VALID.lr_img_path = 'ULB17-VT/LR_VALID/'
+config.VALID.rgb_img_path = 'ULB17-VT/RGB_VALID/'
+# config.VALID.lr_img_path = 'DIV2K/DIV2K_valid_LR_bicubic/X4/'
+# config.VALID.rgb_img_path = 'DIV2K/DIV2K_valid_LR_bicubic/X4/'
 
 def log_config(filename, cfg):
     with open(filename, 'w') as f:
