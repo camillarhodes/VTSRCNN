@@ -58,7 +58,7 @@ def get_train_data():
 
     # dataset API and augmentation
     def generator_train():
-        for img, rgb in zip(train_hr_imgs, train_rgb_imgs):
+       for img, rgb in zip(train_hr_imgs, train_rgb_imgs):
             yield img, rgb
 
     def _map_fn_train(img_rgb_pair):
@@ -117,6 +117,7 @@ def train():
                 epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss))
         if (epoch != 0) and (epoch % 10 == 0):
             tl.vis.save_images(fake_imgs.numpy(), [2, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
+            G.save_weights(os.path.join(checkpoint_dir, 'g.h5'))
 
     ## adversarial learning (G, D)
     # n_step_epoch = round(n_epoch // batch_size)
