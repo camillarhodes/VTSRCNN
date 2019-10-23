@@ -116,7 +116,7 @@ def train():
             print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, mse: {:.3f} ".format(
                 epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss))
         if (epoch != 0) and (epoch % 10 == 0):
-            tl.vis.save_images(fake_imgs.numpy(), [2, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
+            tl.vis.save_images(fake_imgs.numpy(), [3, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
             G.save_weights(os.path.join(checkpoint_dir, 'g.h5'))
 
     ## adversarial learning (G, D)
