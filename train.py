@@ -69,8 +69,10 @@ def get_train_data():
         rgb=tf.expand_dims(rgb, 0)
         # rgb.set_shape([None,240,320,3])
         # hr_patch = tf.image.random_crop(img, [384, 384, 3])
-        #hr_patch = hr_patch / (255. / 2.)
-        #hr_patch = hr_patch - 1.
+        img = img / (255. / 2.)
+        rgb = rgb / (255. / 2.)
+        img = img - 1.
+        rgb = rgb - 1
         #hr_patch = tf.image.random_flip_left_right(hr_patch)
         #lr_patch = tf.image.resize(hr_patch, size=[96, 96])
         lr_img = tf.image.resize(img, size=[60, 80])
