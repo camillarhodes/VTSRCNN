@@ -3,38 +3,47 @@
 
 import tensorflow as tf
 import tensorlayer as tl
-from tensorlayer.layers import (Input, Conv2d, BatchNorm2d, Elementwise, SubpixelConv2d, Flatten, Dense)
+from tensorlayer.layers import (Input, Conv2d, BatchNorm2d, Elementwise, SubpixelConv2d, Flatten, Dense, Concat)
 from tensorlayer.models import Model
 
-def get_G(input_shape):
+def get_G(input_shape, rgb_input_shape):
     w_init = tf.random_normal_initializer(stddev=0.02)
     g_init = tf.random_normal_initializer(1., 0.02)
 
     nin = Input(input_shape)
-    n = Conv2d(64, (3, 3), (1, 1), act=tf.nn.relu, padding='SAME', W_init=w_init)(nin)
+
+    # fusion layers
+    nin2 = Input(rgb_input_shape)
+    nn2 = Conv2d(64, (3, 3), (2, 2), padding='SAME', W_init=w_init, b_init=None, act=tf.nn.elu)(nin2)
+    nn2 = Conv2d(64, (3, 3), (2, 2), padding='SAME', W_init=w_init, b_init=None, act=tf.nn.elu)(nn2)
+
+    n = Conv2d(64, (9, 9), (1, 1), act=tf.nn.elu, padding='SAME', W_init=w_init)(nin)
+
+    concat = Concat(concat_dim=3)([n, nn2])
+    n = Conv2d(64, (1, 1), (1, 1), padding='SAME', W_init=w_init, b_init=None)(concat)
     temp = n
 
     # B residual blocks
-    for i in range(16):
-        nn = Conv2d(64, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
-        nn = BatchNorm2d(act=tf.nn.relu, gamma_init=g_init)(nn)
-        nn = Conv2d(64, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None)(nn)
-        nn = BatchNorm2d(gamma_init=g_init)(nn)
+    for i in range(5):
+        nn = Conv2d(64, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None, act=tf.nn.elu)(n)
+        #nn = BatchNorm2d(act=tf.nn.relu, gamma_init=g_init)(nn)
+        nn = Conv2d(64, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None, act=tf.nn.elu)(nn)
+        #nn = BatchNorm2d(gamma_init=g_init)(nn)
         nn = Elementwise(tf.add)([n, nn])
         n = nn
 
     n = Conv2d(64, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm(gamma_init=g_init)(n)
+    n = BatchNorm2d(gamma_init=g_init)(n)
     n = Elementwise(tf.add)([n, temp])
     # B residual blacks end
 
     n = Conv2d(256, (3, 3), (1, 1), padding='SAME', W_init=w_init)(n)
-    n = SubpixelConv2d(scale=2, n_out_channels=None, act=tf.nn.relu)(n)
+    n = SubpixelConv2d(scale=2, n_out_channels=None, act=tf.nn.elu)(n)
 
     n = Conv2d(256, (3, 3), (1, 1), act=None, padding='SAME', W_init=w_init)(n)
-    n = SubpixelConv2d(scale=2, n_out_channels=None, act=tf.nn.relu)(n)
+    n = SubpixelConv2d(scale=2, n_out_channels=None, act=tf.nn.elu)(n)
 
-    nn = Conv2d(3, (1, 1), (1, 1), act=tf.nn.tanh, padding='SAME', W_init=w_init)(n)
+    nn = Conv2d(3, (9, 9), (1, 1), act=tf.nn.tanh, padding='SAME', W_init=w_init)(n)
     G = Model(inputs=nin, outputs=nn, name="generator")
     return G
 
