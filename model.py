@@ -44,7 +44,7 @@ def get_G(input_shape, rgb_input_shape):
     n = SubpixelConv2d(scale=2, n_out_channels=None, act=tf.nn.elu)(n)
 
     nn = Conv2d(3, (9, 9), (1, 1), act=tf.nn.tanh, padding='SAME', W_init=w_init)(n)
-    G = Model(inputs=nin, outputs=nn, name="generator")
+    G = Model(inputs=[nin,nin2], outputs=nn, name="generator")
     return G
 
 def get_D(input_shape):

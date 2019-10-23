@@ -58,16 +58,16 @@ def get_train_data():
 
     # dataset API and augmentation
     def generator_train():
-        # for img, rgb in zip(train_hr_imgs, train_rgb_imgs):
-        for img in train_hr_imgs:
-            # yield img, rgb
-            yield img
+        for img, rgb in zip(train_hr_imgs, train_rgb_imgs):
+            yield img, rgb
+
     def _map_fn_train(img_rgb_pair):
-        import ipdb; ipdb.set_trace()
-        img = img_rgb_pair[0][:,:,:1:] # use second channel in IR
+        img = img_rgb_pair[0][:,:,1:2] # use second channel in IR
         img=tf.expand_dims(img, 0)
-        rgb = img_rgb_pair[1][:,:,3:]
+        img.set_shape([1,240,320,1])
+        rgb = img_rgb_pair[1][:,:,:3]
         rgb=tf.expand_dims(rgb, 0)
+        # rgb.set_shape([None,240,320,3])
         # hr_patch = tf.image.random_crop(img, [384, 384, 3])
         #hr_patch = hr_patch / (255. / 2.)
         #hr_patch = hr_patch - 1.
@@ -75,6 +75,7 @@ def get_train_data():
         #lr_patch = tf.image.resize(hr_patch, size=[96, 96])
         lr_img = tf.image.resize(img, size=[60, 80])
         return lr_img[0], img[0], rgb[0]
+        # return lr_img, img, rgb
     train_ds = tf.data.Dataset.from_generator(generator_train, output_types=(tf.float32))
     train_ds = train_ds.map(_map_fn_train, num_parallel_calls=multiprocessing.cpu_count())
         # train_ds = train_ds.repeat(n_epoch_init + n_epoch)
@@ -103,20 +104,19 @@ def train():
     ## initialize learning (G)
     n_step_epoch = round(n_epoch_init // batch_size)
     for epoch in range(n_epoch_init):
-        import ipdb; ipdb.set_trace()
-        for step, (lr_img, img, rgb) in enumerate(train_ds):
-            if lr_patchs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
+        for step, (lr_imgs, imgs, rgbs) in enumerate(train_ds):
+            if lr_imgs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
                 break
             step_time = time.time()
             with tf.GradientTape() as tape:
-                fake_hr_patchs = G(lr_patchs)
-                mse_loss = tl.cost.mean_squared_error(fake_hr_patchs, hr_patchs, is_mean=True)
+                fake_imgs = G([lr_imgs, rgbs])
+                mse_loss = tl.cost.mean_squared_error(fake_imgs, imgs, is_mean=True)
             grad = tape.gradient(mse_loss, G.trainable_weights)
             g_optimizer_init.apply_gradients(zip(grad, G.trainable_weights))
             print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, mse: {:.3f} ".format(
                 epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss))
         if (epoch != 0) and (epoch % 10 == 0):
-            tl.vis.save_images(fake_hr_patchs.numpy(), [2, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
+            tl.vis.save_images(fake_imgs.numpy(), [2, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
 
     ## adversarial learning (G, D)
     # n_step_epoch = round(n_epoch // batch_size)
