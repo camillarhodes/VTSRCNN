@@ -8,7 +8,8 @@ import numpy as np
 import scipy, multiprocessing
 import tensorflow as tf
 import tensorlayer as tl
-from model import get_G, get_D
+# from model import get_G, get_D
+from model import get_G
 from config import config
 
 ###====================== HYPER-PARAMETERS ===========================###
@@ -35,12 +36,17 @@ tl.files.exists_or_mkdir(checkpoint_dir)
 def get_train_data():
     # load dataset
     train_hr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.hr_img_path, regx='.*.png', printable=False))#[0:20]
+    train_rgb_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.rgb_img_path, regx='.*.png', printable=False))#[0:20]
+
+    # make sure pairs match, in the format of (FILENAME_gt.png, FILENAME_gi.png')
+    assert all(file1.split('_')[:-1] == file2.split('_')[:-1] for (file1, file2) in zip(train_hr_img_list, train_rgb_img_list))
         # train_lr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.lr_img_path, regx='.*.png', printable=False))
         # valid_hr_img_list = sorted(tl.files.load_file_list(path=config.VALID.hr_img_path, regx='.*.png', printable=False))
         # valid_lr_img_list = sorted(tl.files.load_file_list(path=config.VALID.lr_img_path, regx='.*.png', printable=False))
 
     ## If your machine have enough memory, please pre-load the entire train set.
     train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
+    train_rgb_imgs = tl.vis.read_images(train_rgb_img_list, path=config.TRAIN.rgb_img_path, n_threads=32)
         # for im in train_hr_imgs:
         #     print(im.shape)
         # valid_lr_imgs = tl.vis.read_images(valid_lr_img_list, path=config.VALID.lr_img_path, n_threads=32)
@@ -49,18 +55,26 @@ def get_train_data():
         # valid_hr_imgs = tl.vis.read_images(valid_hr_img_list, path=config.VALID.hr_img_path, n_threads=32)
         # for im in valid_hr_imgs:
         #     print(im.shape)
-        
+
     # dataset API and augmentation
     def generator_train():
+        # for img, rgb in zip(train_hr_imgs, train_rgb_imgs):
         for img in train_hr_imgs:
+            # yield img, rgb
             yield img
-    def _map_fn_train(img):
-        hr_patch = tf.image.random_crop(img, [384, 384, 3])
-        hr_patch = hr_patch / (255. / 2.)
-        hr_patch = hr_patch - 1.
-        hr_patch = tf.image.random_flip_left_right(hr_patch)
-        lr_patch = tf.image.resize(hr_patch, size=[96, 96])
-        return lr_patch, hr_patch
+    def _map_fn_train(img_rgb_pair):
+        import ipdb; ipdb.set_trace()
+        img = img_rgb_pair[0][:,:,:1:] # use second channel in IR
+        img=tf.expand_dims(img, 0)
+        rgb = img_rgb_pair[1][:,:,3:]
+        rgb=tf.expand_dims(rgb, 0)
+        # hr_patch = tf.image.random_crop(img, [384, 384, 3])
+        #hr_patch = hr_patch / (255. / 2.)
+        #hr_patch = hr_patch - 1.
+        #hr_patch = tf.image.random_flip_left_right(hr_patch)
+        #lr_patch = tf.image.resize(hr_patch, size=[96, 96])
+        lr_img = tf.image.resize(img, size=[60, 80])
+        return lr_img[0], img[0], rgb[0]
     train_ds = tf.data.Dataset.from_generator(generator_train, output_types=(tf.float32))
     train_ds = train_ds.map(_map_fn_train, num_parallel_calls=multiprocessing.cpu_count())
         # train_ds = train_ds.repeat(n_epoch_init + n_epoch)
@@ -71,25 +85,26 @@ def get_train_data():
     return train_ds
 
 def train():
-    G = get_G((batch_size, 96, 96, 3))
-    D = get_D((batch_size, 384, 384, 3))
-    VGG = tl.models.vgg19(pretrained=True, end_with='pool4', mode='static')
+    G = get_G((batch_size, 60, 80, 1), (batch_size, 240, 320, 3))
+    #D = get_D((batch_size, 384, 384, 3))
+    #VGG = tl.models.vgg19(pretrained=True, end_with='pool4', mode='static')
 
     lr_v = tf.Variable(lr_init)
     g_optimizer_init = tf.optimizers.Adam(lr_v, beta_1=beta1)
     g_optimizer = tf.optimizers.Adam(lr_v, beta_1=beta1)
-    d_optimizer = tf.optimizers.Adam(lr_v, beta_1=beta1)
+    #d_optimizer = tf.optimizers.Adam(lr_v, beta_1=beta1)
 
     G.train()
-    D.train()
-    VGG.train()
+    #D.train()
+    #VGG.train()
 
     train_ds = get_train_data()
 
     ## initialize learning (G)
     n_step_epoch = round(n_epoch_init // batch_size)
     for epoch in range(n_epoch_init):
-        for step, (lr_patchs, hr_patchs) in enumerate(train_ds):
+        import ipdb; ipdb.set_trace()
+        for step, (lr_img, img, rgb) in enumerate(train_ds):
             if lr_patchs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
                 break
             step_time = time.time()
@@ -104,43 +119,43 @@ def train():
             tl.vis.save_images(fake_hr_patchs.numpy(), [2, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
 
     ## adversarial learning (G, D)
-    n_step_epoch = round(n_epoch // batch_size)
-    for epoch in range(n_epoch):
-        for step, (lr_patchs, hr_patchs) in enumerate(train_ds):
-            if lr_patchs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
-                break
-            step_time = time.time()
-            with tf.GradientTape(persistent=True) as tape:
-                fake_patchs = G(lr_patchs)
-                logits_fake = D(fake_patchs)
-                logits_real = D(hr_patchs)
-                feature_fake = VGG((fake_patchs+1)/2.) # the pre-trained VGG uses the input range of [0, 1]
-                feature_real = VGG((hr_patchs+1)/2.)
-                d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real))
-                d_loss2 = tl.cost.sigmoid_cross_entropy(logits_fake, tf.zeros_like(logits_fake))
-                d_loss = d_loss1 + d_loss2
-                g_gan_loss = 1e-3 * tl.cost.sigmoid_cross_entropy(logits_fake, tf.ones_like(logits_fake))
-                mse_loss = tl.cost.mean_squared_error(fake_patchs, hr_patchs, is_mean=True)
-                vgg_loss = 2e-6 * tl.cost.mean_squared_error(feature_fake, feature_real, is_mean=True)
-                g_loss = mse_loss + vgg_loss + g_gan_loss
-            grad = tape.gradient(g_loss, G.trainable_weights)
-            g_optimizer.apply_gradients(zip(grad, G.trainable_weights))
-            grad = tape.gradient(d_loss, D.trainable_weights)
-            d_optimizer.apply_gradients(zip(grad, D.trainable_weights))
-            print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, g_loss(mse:{:.3f}, vgg:{:.3f}, adv:{:.3f}) d_loss: {:.3f}".format(
-                epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss, vgg_loss, g_gan_loss, d_loss))
+    # n_step_epoch = round(n_epoch // batch_size)
+    # for epoch in range(n_epoch):
+    #     for step, (lr_patchs, hr_patchs) in enumerate(train_ds):
+    #         if lr_patchs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
+    #             break
+    #         step_time = time.time()
+    #         with tf.GradientTape(persistent=True) as tape:
+    #             fake_patchs = G(lr_patchs)
+    #             logits_fake = D(fake_patchs)
+    #             logits_real = D(hr_patchs)
+    #             feature_fake = VGG((fake_patchs+1)/2.) # the pre-trained VGG uses the input range of [0, 1]
+    #             feature_real = VGG((hr_patchs+1)/2.)
+    #             d_loss1 = tl.cost.sigmoid_cross_entropy(logits_real, tf.ones_like(logits_real))
+    #             d_loss2 = tl.cost.sigmoid_cross_entropy(logits_fake, tf.zeros_like(logits_fake))
+    #             d_loss = d_loss1 + d_loss2
+    #             g_gan_loss = 1e-3 * tl.cost.sigmoid_cross_entropy(logits_fake, tf.ones_like(logits_fake))
+    #             mse_loss = tl.cost.mean_squared_error(fake_patchs, hr_patchs, is_mean=True)
+    #             vgg_loss = 2e-6 * tl.cost.mean_squared_error(feature_fake, feature_real, is_mean=True)
+    #             g_loss = mse_loss + vgg_loss + g_gan_loss
+    #         grad = tape.gradient(g_loss, G.trainable_weights)
+    #         g_optimizer.apply_gradients(zip(grad, G.trainable_weights))
+    #         grad = tape.gradient(d_loss, D.trainable_weights)
+    #         d_optimizer.apply_gradients(zip(grad, D.trainable_weights))
+    #         print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, g_loss(mse:{:.3f}, vgg:{:.3f}, adv:{:.3f}) d_loss: {:.3f}".format(
+    #             epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss, vgg_loss, g_gan_loss, d_loss))
 
-        # update the learning rate
-        if epoch != 0 and (epoch % decay_every == 0):
-            new_lr_decay = lr_decay**(epoch // decay_every)
-            lr_v.assign(lr_init * new_lr_decay)
-            log = " ** new learning rate: %f (for GAN)" % (lr_init * new_lr_decay)
-            print(log)
+    #     # update the learning rate
+    #     if epoch != 0 and (epoch % decay_every == 0):
+    #         new_lr_decay = lr_decay**(epoch // decay_every)
+    #         lr_v.assign(lr_init * new_lr_decay)
+    #         log = " ** new learning rate: %f (for GAN)" % (lr_init * new_lr_decay)
+    #         print(log)
 
-        if (epoch != 0) and (epoch % 10 == 0):
-            tl.vis.save_images(fake_patchs.numpy(), [2, 4], os.path.join(save_dir, 'train_g_{}.png'.format(epoch)))
-            G.save_weights(os.path.join(checkpoint_dir, 'g.h5'))
-            D.save_weights(os.path.join(checkpoint_dir, 'd.h5'))
+    #     if (epoch != 0) and (epoch % 10 == 0):
+    #         tl.vis.save_images(fake_patchs.numpy(), [2, 4], os.path.join(save_dir, 'train_g_{}.png'.format(epoch)))
+    #         G.save_weights(os.path.join(checkpoint_dir, 'g.h5'))
+    #         D.save_weights(os.path.join(checkpoint_dir, 'd.h5'))
 
 def evaluate():
     ###====================== PRE-LOAD DATA ===========================###
