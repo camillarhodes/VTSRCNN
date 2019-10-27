@@ -11,13 +11,14 @@ config.TRAIN.lr_init = 1e-4
 config.TRAIN.beta1 = 0.9
 
 ## initialize G
-config.TRAIN.n_epoch_init = 5000
+config.TRAIN.n_epoch_init = 5
+# config.TRAIN.n_epoch_init = 5000
 # config.TRAIN.n_epoch_init = 100
-    # config.TRAIN.lr_decay_init = 0.1
-    # config.TRAIN.decay_every_init = int(config.TRAIN.n_epoch_init / 2)
+config.TRAIN.lr_decay_init = 0.1
+config.TRAIN.decay_every_init = int(config.TRAIN.n_epoch_init / 2)
 
 ## adversarial learning (SRGAN)
-config.TRAIN.n_epoch = 2000
+config.TRAIN.n_epoch = 5000
 config.TRAIN.lr_decay = 0.1
 config.TRAIN.decay_every = int(config.TRAIN.n_epoch / 2)
 
@@ -29,8 +30,8 @@ config.TRAIN.rgb_img_path = 'ULB17-VT/RGB/'
 
 config.VALID = edict()
 ## test set location
-config.VALID.hr_img_path = 'ULB17-VT/HR_VALID/'
-config.VALID.lr_img_path = 'ULB17-VT/LR_VALID/'
+config.VALID.hr_img_path = 'ULB17-VT/HR_VALID_NEW/'
+config.VALID.lr_img_path = 'ULB17-VT/LR_VALID_NEW/'
 config.VALID.rgb_img_path = 'ULB17-VT/RGB_VALID/'
 # config.VALID.lr_img_path = 'DIV2K/DIV2K_valid_LR_bicubic/X4/'
 # config.VALID.rgb_img_path = 'DIV2K/DIV2K_valid_LR_bicubic/X4/'

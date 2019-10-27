@@ -3,7 +3,7 @@
 
 import tensorflow as tf
 import tensorlayer as tl
-from tensorlayer.layers import (Input, Conv2d, BatchNorm2d, Elementwise, SubpixelConv2d, Flatten, Dense, Concat)
+from tensorlayer.layers import (Input, Conv2d, BatchNorm2d, Elementwise, SubpixelConv2d, Flatten, Dense, Concat, MeanPool2d)
 from tensorlayer.models import Model
 
 def get_G(input_shape, rgb_input_shape):
@@ -43,46 +43,46 @@ def get_G(input_shape, rgb_input_shape):
     n = Conv2d(256, (3, 3), (1, 1), act=None, padding='SAME', W_init=w_init)(n)
     n = SubpixelConv2d(scale=2, n_out_channels=None, act=tf.nn.elu)(n)
 
-    nn = Conv2d(3, (9, 9), (1, 1), act=tf.nn.tanh, padding='SAME', W_init=w_init)(n)
+    nn = Conv2d(1, (9, 9), (1, 1), act=tf.nn.tanh, padding='SAME', W_init=w_init)(n)
     G = Model(inputs=[nin,nin2], outputs=nn, name="generator")
     return G
 
-def get_D(input_shape):
-    w_init = tf.random_normal_initializer(stddev=0.02)
-    gamma_init = tf.random_normal_initializer(1., 0.02)
-    df_dim = 64
-    lrelu = lambda x: tl.act.lrelu(x, 0.2)
+# def get_D(input_shape):
+#     w_init = tf.random_normal_initializer(stddev=0.02)
+#     gamma_init = tf.random_normal_initializer(1., 0.02)
+#     df_dim = 64
+#     lrelu = lambda x: tl.act.lrelu(x, 0.2)
 
-    nin = Input(input_shape)
-    n = Conv2d(df_dim, (4, 4), (2, 2), act=lrelu, padding='SAME', W_init=w_init)(nin)
+#     nin = Input(input_shape)
+#     n = Conv2d(df_dim, (4, 4), (2, 2), act=lrelu, padding='SAME', W_init=w_init)(nin)
 
-    n = Conv2d(df_dim * 2, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 4, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 8, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 16, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 32, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 16, (1, 1), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 8, (1, 1), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
-    nn = BatchNorm2d(gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 2, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 4, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 8, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 16, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 32, (4, 4), (2, 2), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 16, (1, 1), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 8, (1, 1), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
+#     nn = BatchNorm2d(gamma_init=gamma_init)(n)
 
-    n = Conv2d(df_dim * 2, (1, 1), (1, 1), padding='SAME', W_init=w_init, b_init=None)(nn)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 2, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
-    n = Conv2d(df_dim * 8, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
-    n = BatchNorm2d(gamma_init=gamma_init)(n)
-    n = Elementwise(combine_fn=tf.add, act=lrelu)([n, nn])
+#     n = Conv2d(df_dim * 2, (1, 1), (1, 1), padding='SAME', W_init=w_init, b_init=None)(nn)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 2, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(act=lrelu, gamma_init=gamma_init)(n)
+#     n = Conv2d(df_dim * 8, (3, 3), (1, 1), padding='SAME', W_init=w_init, b_init=None)(n)
+#     n = BatchNorm2d(gamma_init=gamma_init)(n)
+#     n = Elementwise(combine_fn=tf.add, act=lrelu)([n, nn])
 
-    n = Flatten()(n)
-    no = Dense(n_units=1, W_init=w_init)(n)
-    D = Model(inputs=nin, outputs=no, name="discriminator")
-    return D
+#     n = Flatten()(n)
+#     no = Dense(n_units=1, W_init=w_init)(n)
+#     D = Model(inputs=nin, outputs=no, name="discriminator")
+#     return D
 
 # def get_G2(input_shape):
 #     w_init = tf.random_normal_initializer(stddev=0.02)
@@ -124,49 +124,28 @@ def get_D(input_shape):
 #     n = Conv2d(n, 3, (1, 1), (1, 1), act=tf.nn.tanh, padding='SAME', W_init=w_init, name='out')
 #     return n
 
-
-# def SRGAN_d2(t_image, is_train=False, reuse=False):
-#     """ Discriminator in Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network
-#     feature maps (n) and stride (s) feature maps (n) and stride (s)
-#     """
-#     w_init = tf.random_normal_initializer(stddev=0.02)
-#     b_init = None
-#     g_init = tf.random_normal_initializer(1., 0.02)
-#     lrelu = lambda x: tl.act.lrelu(x, 0.2)
-#     with tf.variable_scope("SRGAN_d", reuse=reuse) as vs:
-#         # tl.layers.set_name_reuse(reuse) # remove for TL 1.8.0+
-#         n = InputLayer(t_image, name='in')
-#         n = Conv2d(n, 64, (3, 3), (1, 1), act=lrelu, padding='SAME', W_init=w_init, name='n64s1/c')
-#
-#         n = Conv2d(n, 64, (3, 3), (2, 2), act=lrelu, padding='SAME', W_init=w_init, b_init=b_init, name='n64s2/c')
-#         n = BatchNormLayer(n, is_train=is_train, gamma_init=g_init, name='n64s2/b')
-#
-#         n = Conv2d(n, 128, (3, 3), (1, 1), act=lrelu, padding='SAME', W_init=w_init, b_init=b_init, name='n128s1/c')
-#         n = BatchNormLayer(n, is_train=is_train, gamma_init=g_init, name='n128s1/b')
-#
-#         n = Conv2d(n, 128, (3, 3), (2, 2), act=lrelu, padding='SAME', W_init=w_init, b_init=b_init, name='n128s2/c')
-#         n = BatchNormLayer(n, is_train=is_train, gamma_init=g_init, name='n128s2/b')
-#
-#         n = Conv2d(n, 256, (3, 3), (1, 1), act=lrelu, padding='SAME', W_init=w_init, b_init=b_init, name='n256s1/c')
-#         n = BatchNormLayer(n, is_train=is_train, gamma_init=g_init, name='n256s1/b')
-#
-#         n = Conv2d(n, 256, (3, 3), (2, 2), act=lrelu, padding='SAME', W_init=w_init, b_init=b_init, name='n256s2/c')
-#         n = BatchNormLayer(n, is_train=is_train, gamma_init=g_init, name='n256s2/b')
-#
-#         n = Conv2d(n, 512, (3, 3), (1, 1), act=lrelu, padding='SAME', W_init=w_init, b_init=b_init, name='n512s1/c')
-#         n = BatchNormLayer(n, is_train=is_train, gamma_init=g_init, name='n512s1/b')
-#
-#         n = Conv2d(n, 512, (3, 3), (2, 2), act=lrelu, padding='SAME', W_init=w_init, b_init=b_init, name='n512s2/c')
-#         n = BatchNormLayer(n, is_train=is_train, gamma_init=g_init, name='n512s2/b')
-#
-#         n = FlattenLayer(n, name='f')
-#         n = DenseLayer(n, n_units=1024, act=lrelu, name='d1024')
-#         n = DenseLayer(n, n_units=1, name='out')
-#
-#         logits = n.outputs
-#         n.outputs = tf.nn.sigmoid(n.outputs)
-#
-#         return n, logits
+def SRGAN_d2(input_shape):
+    """ Discriminator in Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network
+    feature maps (n) and stride (s) feature maps (n) and stride (s)
+    """
+    w_init = tf.random_normal_initializer(stddev=0.02)
+    b_init = None
+    nin = Input(input_shape)
+    n = Conv2d(64, (3, 3), (1, 1), act=tf.nn.elu, padding='SAME', W_init=w_init, name='n64s1/c')(nin)
+    n = Conv2d(64, (3, 3), (2, 2), act=tf.nn.elu, padding='SAME', W_init=w_init, b_init=b_init, name='n64s2/c')(n)
+    n = Conv2d(128, (3, 3), (1, 1), act=tf.nn.elu, padding='SAME', W_init=w_init, b_init=b_init, name='n128s1/c')(n)
+    n = Conv2d(128, (3, 3), (2, 2), act=tf.nn.elu, padding='SAME', W_init=w_init, b_init=b_init, name='n128s2/c')(n)
+    n = Conv2d(256, (3, 3), (1, 1), act=tf.nn.elu, padding='SAME', W_init=w_init, b_init=b_init, name='n256s1/c')(n)
+    n = Conv2d(256, (3, 3), (2, 2), act=tf.nn.elu, padding='SAME', W_init=w_init, b_init=b_init, name='n256s2/c')(n)
+    n = Conv2d(512, (3, 3), (1, 1), act=tf.nn.elu, padding='SAME', W_init=w_init, b_init=b_init, name='n512s1/c')(n)
+    n = Conv2d(512, (3, 3), (2, 2), act=tf.nn.elu, padding='SAME', W_init=w_init, b_init=b_init, name='n512s2/c')(n)
+    n = MeanPool2d(name='avg_pooling1')(n)
+    n = Flatten(name='f')(n)
+    n = Dense(n_units=1000, act=tf.nn.elu, name='d1024')(n)
+    n = Dense(n_units=1, name='out', act=tf.nn.sigmoid)(n)
+    # outputs = tf.nn.sigmoid(n)
+    D = Model(inputs=nin, outputs=n, name="discriminator")
+    return D
 
 
 # def Vgg19_simple_api(rgb, reuse):
