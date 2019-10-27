@@ -147,8 +147,8 @@ def train():
                 g_optimizer.apply_gradients(zip(grad, G.trainable_weights))
                 grad = tape.gradient(d_loss, D.trainable_weights)
                 d_optimizer.apply_gradients(zip(grad, D.trainable_weights))
-                print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, g_loss(mse:{:.3f}, vgg:{:.3f}, adv:{:.3f}) d_loss: {:.3f}".format(
-                    epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss, vgg_loss, g_gan_loss, d_loss))
+                print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, g_loss(mse:{:.3f}, adv:{:.3f}) d_loss: {:.3f}".format(
+                    epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss, g_gan_loss, d_loss))
 
          # update the learning rate
         if epoch != 0 and (epoch % decay_every == 0):
