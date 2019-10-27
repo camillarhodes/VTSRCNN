@@ -12,6 +12,7 @@ config.TRAIN.beta1 = 0.9
 
 ## initialize G
 config.TRAIN.n_epoch_init = 5
+
 # config.TRAIN.n_epoch_init = 5000
 # config.TRAIN.n_epoch_init = 100
 config.TRAIN.lr_decay_init = 0.1
@@ -24,7 +25,7 @@ config.TRAIN.decay_every = int(config.TRAIN.n_epoch / 2)
 
 ## train set location
 # config.TRAIN.hr_img_path = 'DIV2K/DIV2K_train_HR/'
-config.TRAIN.hr_img_path = 'ULB17-VT/HR/'
+config.TRAIN.hr_img_path = 'ULB17-VT/HR/' # only single channel is used
 config.TRAIN.rgb_img_path = 'ULB17-VT/RGB/'
 # config.TRAIN.lr_img_path = 'DIV2K/DIV2K_train_LR_bicubic/X4/'
 
