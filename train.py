@@ -28,11 +28,11 @@ shuffle_buffer_size = 128
 # ni = int(np.sqrt(batch_size))
 
 # create folders to save result images and trained models
-# save_dir = "samples-middlebury"
-save_dir = "samples"
+save_dir = "samples-middlebury"
+# save_dir = "samples"
 tl.files.exists_or_mkdir(save_dir)
-# checkpoint_dir = "models-middlebury"
-checkpoint_dir = "models"
+checkpoint_dir = "models-middlebury"
+# checkpoint_dir = "models"
 tl.files.exists_or_mkdir(checkpoint_dir)
 
 def get_train_data():
@@ -50,7 +50,7 @@ def get_train_data():
     train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
 
     # This line makes both shapes equal (3=3) to overcome stupid TF bug
-    # train_hr_imgs = [np.repeat(img[:,:,np.newaxis], 3, 2) for img in train_hr_imgs]
+    train_hr_imgs = [np.repeat(img[:,:,np.newaxis], 3, 2) for img in train_hr_imgs]
 
     train_rgb_imgs = tl.vis.read_images(train_rgb_img_list, path=config.TRAIN.rgb_img_path, n_threads=32)
         # for im in train_hr_imgs:
@@ -95,7 +95,7 @@ def get_train_data():
 
 def train():
     G = get_G((batch_size, 60, 80, 1), (batch_size, 240, 320, 3))
-    G.load_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
+    #G.load_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
     D = get_D((batch_size, 240, 320, 1))
     #VGG = tl.models.vgg19(pretrained=True, end_with='pool4', mode='static')
 
@@ -110,23 +110,23 @@ def train():
 
     train_ds = get_train_data()
 
-    ## initialize learning (G)
-    # n_step_epoch = round(n_epoch_init // batch_size)
-    # for epoch in range(n_epoch_init):
-    #     for step, (lr_imgs, imgs, rgbs) in enumerate(train_ds):
-    #         if lr_imgs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
-    #             break
-    #         step_time = time.time()
-    #         with tf.GradientTape() as tape:
-    #             fake_imgs = G([lr_imgs, rgbs])
-    #             mse_loss = tl.cost.mean_squared_error(fake_imgs, imgs, is_mean=True)
-    #         grad = tape.gradient(mse_loss, G.trainable_weights)
-    #         g_optimizer_init.apply_gradients(zip(grad, G.trainable_weights))
-    #         print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, mse: {:.3f} ".format(
-    #             epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss))
-    #     if (epoch != 0) and (epoch % 10 == 0):
-    #         tl.vis.save_images(fake_imgs.numpy(), [3, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
-    #         G.save_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
+    # initialize learning (G)
+    n_step_epoch = round(n_epoch_init // batch_size)
+    for epoch in range(n_epoch_init):
+        for step, (lr_imgs, imgs, rgbs) in enumerate(train_ds):
+            if lr_imgs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
+                break
+            step_time = time.time()
+            with tf.GradientTape() as tape:
+                fake_imgs = G([lr_imgs, rgbs])
+                mse_loss = tl.cost.mean_squared_error(fake_imgs, imgs, is_mean=True)
+            grad = tape.gradient(mse_loss, G.trainable_weights)
+            g_optimizer_init.apply_gradients(zip(grad, G.trainable_weights))
+            print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, mse: {:.3f} ".format(
+                epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss))
+        if (epoch != 0) and (epoch % 10 == 0):
+            tl.vis.save_images(fake_imgs.numpy(), [3, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
+            G.save_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
 
     # adversarial learning (G, D)
     n_step_epoch = round(n_epoch // batch_size)
@@ -209,7 +209,7 @@ def evaluate(image_ids):
 
     ###========================== DEFINE MODEL ============================###
     G = get_G((1, None, None, 1), (1, None, None, 3))
-    G.load_weights(os.path.join(checkpoint_dir, 'g.h5'))
+    G.load_weights(os.path.join(checkpoint_dir, 'g_gan.h5'))
     G.eval()
 
     for imid in image_ids:
