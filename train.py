@@ -92,6 +92,7 @@ def get_train_data():
 
 def train():
     G = get_G((batch_size, 60, 80, 1), (batch_size, 240, 320, 3))
+    G.load_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
     D = get_D((batch_size, 240, 320, 1))
     #VGG = tl.models.vgg19(pretrained=True, end_with='pool4', mode='static')
 
@@ -107,22 +108,22 @@ def train():
     train_ds = get_train_data()
 
     ## initialize learning (G)
-    n_step_epoch = round(n_epoch_init // batch_size)
-    for epoch in range(n_epoch_init):
-        for step, (lr_imgs, imgs, rgbs) in enumerate(train_ds):
-            if lr_imgs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
-                break
-            step_time = time.time()
-            with tf.GradientTape() as tape:
-                fake_imgs = G([lr_imgs, rgbs])
-                mse_loss = tl.cost.mean_squared_error(fake_imgs, imgs, is_mean=True)
-            grad = tape.gradient(mse_loss, G.trainable_weights)
-            g_optimizer_init.apply_gradients(zip(grad, G.trainable_weights))
-            print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, mse: {:.3f} ".format(
-                epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss))
-        if (epoch != 0) and (epoch % 10 == 0):
-            tl.vis.save_images(fake_imgs.numpy(), [3, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
-            G.save_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
+    # n_step_epoch = round(n_epoch_init // batch_size)
+    # for epoch in range(n_epoch_init):
+    #     for step, (lr_imgs, imgs, rgbs) in enumerate(train_ds):
+    #         if lr_imgs.shape[0] != batch_size: # if the remaining data in this epoch < batch_size
+    #             break
+    #         step_time = time.time()
+    #         with tf.GradientTape() as tape:
+    #             fake_imgs = G([lr_imgs, rgbs])
+    #             mse_loss = tl.cost.mean_squared_error(fake_imgs, imgs, is_mean=True)
+    #         grad = tape.gradient(mse_loss, G.trainable_weights)
+    #         g_optimizer_init.apply_gradients(zip(grad, G.trainable_weights))
+    #         print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, mse: {:.3f} ".format(
+    #             epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss))
+    #     if (epoch != 0) and (epoch % 10 == 0):
+    #         tl.vis.save_images(fake_imgs.numpy(), [3, 4], os.path.join(save_dir, 'train_g_init_{}.png'.format(epoch)))
+    #         G.save_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
 
     # adversarial learning (G, D)
     n_step_epoch = round(n_epoch // batch_size)
