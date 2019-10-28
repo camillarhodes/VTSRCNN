@@ -25,8 +25,10 @@ config.TRAIN.decay_every = int(config.TRAIN.n_epoch / 2)
 ## train set location
 # config.TRAIN.hr_img_path = 'DIV2K/DIV2K_train_HR/'
 # config.TRAIN.hr_img_path = 'Middlebury/Train/HR/' # only single channel is used
-config.TRAIN.hr_img_path = 'Middlebury/Train/HR' # only single channel is used
-config.TRAIN.rgb_img_path = 'Middlebury/Train/RGB'
+# config.TRAIN.hr_img_path = 'Middlebury/Train/HR' # only single channel is used
+# config.TRAIN.rgb_img_path = 'Middlebury/Train/RGB'
+config.TRAIN.hr_img_path = 'ULB17-VT/HR/' # only single channel is used
+config.TRAIN.rgb_img_path = 'ULB17-VT/RGB/' # only single channel is used
 # config.TRAIN.lr_img_path = 'DIV2K/DIV2K_train_LR_bicubic/X4/'
 
 config.VALID = edict()
