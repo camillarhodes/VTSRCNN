@@ -28,9 +28,9 @@ shuffle_buffer_size = 128
 # ni = int(np.sqrt(batch_size))
 
 # create folders to save result images and trained models
-save_dir = "samples"
+save_dir = "samples-middlebury"
 tl.files.exists_or_mkdir(save_dir)
-checkpoint_dir = "models"
+checkpoint_dir = "models-middlebury"
 tl.files.exists_or_mkdir(checkpoint_dir)
 
 def get_train_data():
@@ -46,6 +46,9 @@ def get_train_data():
 
     ## If your machine have enough memory, please pre-load the entire train set.
     train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
+
+    # This line makes both shapes equal (3=3) to overcome stupid TF bug
+    train_hr_imgs = [np.repeat(img[:,:,np.newaxis], 3, 2) for img in train_hr_imgs]
     train_rgb_imgs = tl.vis.read_images(train_rgb_img_list, path=config.TRAIN.rgb_img_path, n_threads=32)
         # for im in train_hr_imgs:
         #     print(im.shape)
