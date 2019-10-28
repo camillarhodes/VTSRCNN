@@ -150,12 +150,12 @@ def train():
                 # vgg_loss = 2e-6 * tl.cost.mean_squared_error(feature_fake, feature_real, is_mean=True)
                 # g_loss = mse_loss + vgg_loss + g_gan_loss
                 g_loss = (1e-2) * mse_loss + g_gan_loss
-                grad = tape.gradient(g_loss, G.trainable_weights)
-                g_optimizer.apply_gradients(zip(grad, G.trainable_weights))
-                grad = tape.gradient(d_loss, D.trainable_weights)
-                d_optimizer.apply_gradients(zip(grad, D.trainable_weights))
-                print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, g_loss(mse:{:.3f}, adv:{:.3f}) d_loss: {:.3f}".format(
-                    epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss, g_gan_loss, d_loss))
+            grad = tape.gradient(g_loss, G.trainable_weights)
+            g_optimizer.apply_gradients(zip(grad, G.trainable_weights))
+            grad = tape.gradient(d_loss, D.trainable_weights)
+            d_optimizer.apply_gradients(zip(grad, D.trainable_weights))
+            print("Epoch: [{}/{}] step: [{}/{}] time: {:.3f}s, g_loss(mse:{:.3f}, adv:{:.3f}) d_loss: {:.3f}".format(
+                epoch, n_epoch_init, step, n_step_epoch, time.time() - step_time, mse_loss, g_gan_loss, d_loss))
 
          # update the learning rate
         if epoch != 0 and (epoch % decay_every == 0):
