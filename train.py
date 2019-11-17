@@ -28,11 +28,12 @@ shuffle_buffer_size = 128
 # ni = int(np.sqrt(batch_size))
 
 # create folders to save result images and trained models
-save_dir = "samples-middlebury"
+# save_dir = "samples-middlebury"
 # save_dir = "samples"
+save_dir = "samples-rgbnir"
 tl.files.exists_or_mkdir(save_dir)
-checkpoint_dir = "models-middlebury"
-# checkpoint_dir = "models"
+# checkpoint_dir = "models-middlebury"
+checkpoint_dir = "models-rgbnir"
 tl.files.exists_or_mkdir(checkpoint_dir)
 
 def get_train_data():
@@ -68,17 +69,18 @@ def get_train_data():
             yield img, rgb
 
     def _map_fn_train(img_rgb_pair):
-        img = img_rgb_pair[0][:,:,1:2] # use second channel in IR
+        img = img_rgb_pair[0]
+        #make sure right shape
         img=tf.expand_dims(img, 0)
         img.set_shape([1,240,320,1])
         rgb = img_rgb_pair[1][:,:,:3]
         rgb=tf.expand_dims(rgb, 0)
         # rgb.set_shape([None,240,320,3])
         # hr_patch = tf.image.random_crop(img, [384, 384, 3])
-        img = img / (255. / 2.)
-        rgb = rgb / (255. / 2.)
-        img = img - 1.
-        rgb = rgb - 1
+        img = img / (255.)
+        rgb = rgb / (255.)
+        #img = img - 1.
+        #rgb = rgb - 1
         #hr_patch = tf.image.random_flip_left_right(hr_patch)
         #lr_patch = tf.image.resize(hr_patch, size=[96, 96])
         lr_img = tf.image.resize(img, size=[60, 80])
@@ -174,17 +176,17 @@ def evaluate(image_ids):
     # train_hr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.hr_img_path, regx='.*.png', printable=False))
     # train_lr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.lr_img_path, regx='.*.png', printable=False))
     valid_hr_img_list = sorted(tl.files.load_file_list(path=config.VALID.hr_img_path, regx='.*.png', printable=False))
-    valid_lr_img_list = sorted(tl.files.load_file_list(path=config.VALID.lr_img_path, regx='.*.png', printable=False))
+    # valid_lr_img_list = sorted(tl.files.load_file_list(path=config.VALID.lr_img_path, regx='.*.png', printable=False))
     valid_rgb_img_list = sorted(tl.files.load_file_list(path=config.VALID.rgb_img_path, regx='.*.png', printable=False))
 
 
-    assert all(file1.split('_')[0] == file2.split('_')[0] == file3.split('_')[0] for (file1, file2, file3) in zip(valid_lr_img_list, valid_lr_img_list, valid_rgb_img_list))
+    assert all(file1.split('_')[0] == file2.split('_')[0] for (file1, file2) in zip(valid_hr_img_list, valid_rgb_img_list))
 
     ## if your machine have enough memory, please pre-load the whole train set.
     # train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
     # for im in train_hr_imgs:
     #     print(im.shape)
-    valid_lr_imgs = tl.vis.read_images(valid_lr_img_list, path=config.VALID.lr_img_path, n_threads=32)
+    # valid_lr_imgs = tl.vis.read_images(valid_lr_img_list, path=config.VALID.lr_img_path, n_threads=32)
     # for im in valid_lr_imgs:
     #     print(im.shape)
     valid_hr_imgs = tl.vis.read_images(valid_hr_img_list, path=config.VALID.hr_img_path, n_threads=32)
@@ -194,28 +196,29 @@ def evaluate(image_ids):
 
     def _map_fn_valid_ir(img):
         # img = img[:,:,1:2] # use second channel in IR
-        img = img / (255. / 2.)
-        img = img - 1.
+        img = img / (255.)
+        # img = img - 1.
         return img
     def _map_fn_valid_rgb(img):
-        img = img / (255. / 2.)
-        img = img - 1.
+        img = img / (255.)
+        # img = img - 1.
         img = img[:,:,:3]
         return img
 
-    valid_lr_imgs = list(map(_map_fn_valid_ir, valid_lr_imgs))
+    # valid_lr_imgs = list(map(_map_fn_valid_ir, valid_lr_imgs))
     valid_hr_imgs = list(map(_map_fn_valid_ir, valid_hr_imgs))
     valid_rgb_imgs = list(map(_map_fn_valid_rgb, valid_rgb_imgs))
 
     ###========================== DEFINE MODEL ============================###
     G = get_G((1, None, None, 1), (1, None, None, 3))
-    G.load_weights(os.path.join(checkpoint_dir, 'g_gan.h5'))
+    G.load_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
     G.eval()
 
     for imid in image_ids:
 
-        valid_lr_img = valid_lr_imgs[imid]
+        # valid_lr_img = valid_lr_imgs[imid]
         valid_hr_img = valid_hr_imgs[imid]
+        valid_lr_img = tf.image.resize(valid_hr_img[:,:,np.newaxis], size=[60, 80])
         valid_rgb_img = valid_rgb_imgs[imid]
 
         # valid_lr_img = get_imgs_fn('test.png', 'data2017/')  # if you want to test your own image
@@ -224,7 +227,7 @@ def evaluate(image_ids):
 
 
         valid_lr_img = np.asarray(valid_lr_img, dtype=np.float32)
-        valid_lr_img = valid_lr_img[np.newaxis,:,:,np.newaxis]
+        valid_lr_img = valid_lr_img[np.newaxis,:,:,:]
         valid_rgb_img = np.asarray(valid_rgb_img, dtype=np.float32)
         valid_rgb_img = valid_rgb_img[np.newaxis,:,:,:]
         size = [valid_lr_img.shape[1], valid_lr_img.shape[2]]
@@ -244,6 +247,10 @@ def evaluate(image_ids):
         channels = out.shape[-1]
         psnr = -1
         ssim = -1
+        out -= np.min(out)
+        out /= np.max(out)
+        valid_hr_img -= np.min(valid_hr_img)
+        valid_hr_img /= np.max(valid_hr_img)
         for dim in range(channels):
             psnr = max(tf.image.psnr(
                 out[0,:,:,dim:dim+1], valid_hr_img[:,:,np.newaxis], max_val=1

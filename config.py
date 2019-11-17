@@ -12,32 +12,26 @@ config.TRAIN.beta1 = 0.9
 
 ## initialize G
 
-config.TRAIN.n_epoch_init = 3000
-# config.TRAIN.n_epoch_init = 100
+# config.TRAIN.n_epoch_init = 3000
+config.TRAIN.n_epoch_init = 100
 config.TRAIN.lr_decay_init = 0.1
 config.TRAIN.decay_every_init = int(config.TRAIN.n_epoch_init / 2)
 
 ## adversarial learning (SRGAN)
-config.TRAIN.n_epoch = 2000
+# config.TRAIN.n_epoch = 2000
+config.TRAIN.n_epoch = 100
 config.TRAIN.lr_decay = 0.1
 config.TRAIN.decay_every = int(config.TRAIN.n_epoch / 2)
 
 ## train set location
 # config.TRAIN.hr_img_path = 'DIV2K/DIV2K_train_HR/'
-config.TRAIN.hr_img_path = 'Middlebury/Train/HR' # only single channel is used
-config.TRAIN.rgb_img_path = 'Middlebury/Train/RGB'
-# config.TRAIN.hr_img_path = 'ULB17-VT/HR/' # only single channel is used
-# config.TRAIN.rgb_img_path = 'ULB17-VT/RGB/' # only single channel is used
-# config.TRAIN.lr_img_path = 'DIV2K/DIV2K_train_LR_bicubic/X4/'
+config.TRAIN.hr_img_path = 'rgbnir/train/HR' # only single channel is used
+config.TRAIN.rgb_img_path = 'rgbnir/train/RGB'
 
-config.VALID = edict()
 ## test set location
-config.VALID.hr_img_path = 'Middlebury/Valid/HR'
-config.VALID.lr_img_path = 'Middlebury/Valid/LR'
-config.VALID.rgb_img_path = 'Middlebury/Valid/RGB'
-# config.VALID.hr_img_path = 'ULB17-VT/HR_VALID_NEW'
-# config.VALID.lr_img_path = 'ULB17-VT/LR_VALID_NEW'
-# config.VALID.rgb_img_path = 'ULB17-VT/RGB_VALID'
+config.VALID = edict()
+config.VALID.hr_img_path = 'rgbnir/valid/HR'
+config.VALID.rgb_img_path = 'rgbnir/valid/RGB'
 # config.VALID.lr_img_path = 'DIV2K/DIV2K_valid_LR_bicubic/X4/'
 # config.VALID.rgb_img_path = 'DIV2K/DIV2K_valid_LR_bicubic/X4/'
 
