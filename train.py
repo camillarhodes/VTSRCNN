@@ -71,7 +71,7 @@ def get_train_data():
     def _map_fn_train(img_rgb_pair):
         img = img_rgb_pair[0][:,:,:1]
         img=tf.expand_dims(img, 0)
-        img.set_shape([1,340,320,1])
+        img.set_shape([1,340,512,1])
         rgb = img_rgb_pair[1][:,:,:3]
         rgb=tf.expand_dims(rgb, 0)
         # rgb.set_shape([None,240,320,3])
