@@ -42,7 +42,7 @@ def get_train_data():
     train_rgb_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.rgb_img_path, regx='.*.png', printable=False))#[0:20]
 
     # make sure pairs match, in the format of (FILENAME_gt.png, FILENAME_gi.png')
-    assert all(file1.split('_')[0] == file2.split('_')[0] for (file1, file2) in zip(train_hr_img_list, train_rgb_img_list))
+    assert all(file1.split('_')[:-1] == file2.split('_')[:-1] for (file1, file2) in zip(train_hr_img_list, train_rgb_img_list))
         # train_lr_img_list = sorted(tl.files.load_file_list(path=config.TRAIN.lr_img_path, regx='.*.png', printable=False))
         # valid_hr_img_list = sorted(tl.files.load_file_list(path=config.VALID.hr_img_path, regx='.*.png', printable=False))
         # valid_lr_img_list = sorted(tl.files.load_file_list(path=config.VALID.lr_img_path, regx='.*.png', printable=False))
@@ -69,10 +69,9 @@ def get_train_data():
             yield img, rgb
 
     def _map_fn_train(img_rgb_pair):
-        img = img_rgb_pair[0]
-        #make sure right shape
+        img = img_rgb_pair[0][:,:,:1]
         img=tf.expand_dims(img, 0)
-        img.set_shape([1,240,320,1])
+        img.set_shape([1,340,320,1])
         rgb = img_rgb_pair[1][:,:,:3]
         rgb=tf.expand_dims(rgb, 0)
         # rgb.set_shape([None,240,320,3])
@@ -83,7 +82,7 @@ def get_train_data():
         #rgb = rgb - 1
         #hr_patch = tf.image.random_flip_left_right(hr_patch)
         #lr_patch = tf.image.resize(hr_patch, size=[96, 96])
-        lr_img = tf.image.resize(img, size=[60, 80])
+        lr_img = tf.image.resize(img, size=[85, 128])
         return lr_img[0], img[0], rgb[0]
         # return lr_img, img, rgb
     train_ds = tf.data.Dataset.from_generator(generator_train, output_types=(tf.float32))
@@ -96,9 +95,9 @@ def get_train_data():
     return train_ds
 
 def train():
-    G = get_G((batch_size, 60, 80, 1), (batch_size, 240, 320, 3))
+    G = get_G((batch_size, 85, 128, 1), (batch_size, 340, 512, 3))
     #G.load_weights(os.path.join(checkpoint_dir, 'g_init.h5'))
-    D = get_D((batch_size, 240, 320, 1))
+    D = get_D((batch_size, 340, 512, 1))
     #VGG = tl.models.vgg19(pretrained=True, end_with='pool4', mode='static')
 
     lr_v = tf.Variable(lr_init)
@@ -180,7 +179,7 @@ def evaluate(image_ids):
     valid_rgb_img_list = sorted(tl.files.load_file_list(path=config.VALID.rgb_img_path, regx='.*.png', printable=False))
 
 
-    assert all(file1.split('_')[0] == file2.split('_')[0] for (file1, file2) in zip(valid_hr_img_list, valid_rgb_img_list))
+    assert all(file1.split('_')[:-1] == file2.split('_')[:-1] for (file1, file2) in zip(valid_hr_img_list, valid_rgb_img_list))
 
     ## if your machine have enough memory, please pre-load the whole train set.
     # train_hr_imgs = tl.vis.read_images(train_hr_img_list, path=config.TRAIN.hr_img_path, n_threads=32)
@@ -218,7 +217,7 @@ def evaluate(image_ids):
 
         # valid_lr_img = valid_lr_imgs[imid]
         valid_hr_img = valid_hr_imgs[imid]
-        valid_lr_img = tf.image.resize(valid_hr_img[:,:,np.newaxis], size=[60, 80])
+        valid_lr_img = tf.image.resize(valid_hr_img[:,:,np.newaxis], size=[85, 128])
         valid_rgb_img = valid_rgb_imgs[imid]
 
         # valid_lr_img = get_imgs_fn('test.png', 'data2017/')  # if you want to test your own image
